@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Window Cleaning Revenue Tracker</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header {
+    text-align: center;
+    padding: 30px 0 20px;
+  }
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #38bdf8;
+  }
+  header p { color: #94a3b8; margin-top: 6px; font-size: 0.9rem; }
+
+  .card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid #334155;
+  }
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+  }
+  label { font-size: 0.8rem; color: #94a3b8; }
+  input, select {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: #38bdf8; }
+
+  .btn {
+    padding: 11px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #38bdf8; color: #0f172a; }
+  .btn-success { background: #22c55e; color: #0f172a; }
+  .btn-danger  { background: #ef4444; color: #fff; font-size: 0.8rem; padding: 6px 12px; }
+
+  .challenge-list { display: flex; flex-direction: column; gap: 14px; }
+  .challenge-item {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #334155;
+  }
+  .challenge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .challenge-title { font-weight: 600; font-size: 1rem; }
+  .challenge-date  { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
+
+  .timeframe-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .tab {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid #334155;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab.active, .tab:hover { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+
+  .timeframe-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .tf-daily   { background: #7c3aed30; color: #a78bfa; }
+  .tf-weekly  { background: #0ea5e930; color: #38bdf8; }
+  .tf-monthly { background: #f59e0b30; color: #fbbf24; }
+  .tf-custom  { background: #ec489930; color: #f472b6; }
+
+  .days-left {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  .days-left .urgent { color: #f59e0b; font-weight: 600; }
+
+  .progress-bar-bg {
+    background: #1e293b;
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .stats-row span { white-space: nowrap; }
+  .stats-row .highlight { color: #38bdf8; font-weight: 600; }
+  .stats-row .earned   { color: #22c55e; font-weight: 600; }
+  .stats-row .over     { color: #f59e0b; font-weight: 600; }
+
+  .log-entry-form {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .log-entry-form input {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .log-list {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: #64748b;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  .log-list div { padding: 2px 0; border-bottom: 1px solid #1e293b; }
+  .log-list div span { color: #22c55e; font-weight: 600; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .badge-active  { background: #0ea5e920; color: #38bdf8; border: 1px solid #38bdf8; }
+  .badge-met     { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e; }
+  .badge-missed  { background: #ef444420; color: #ef4444; border: 1px solid #ef4444; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .summary-box {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #334155;
+  }
+  .summary-box .val {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #38bdf8;
+  }
+  .summary-box .lbl {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 4px;
+  }
+
+  .daily-target-box {
+    background: #0a1628;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-top: 10px;
+  }
+  .dt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .dt-label { font-size: 0.8rem; color: #94a3b8; }
+  .dt-val   { font-size: 0.95rem; font-weight: 700; color: #38bdf8; }
+
+  .empty { text-align: center; color: #475569; padding: 30px; font-size: 0.9rem; }
+
+  .view-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .view-tab {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .view-tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+  .view-tab .count-pill {
+    display: inline-block;
+    background: #0f172a40;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    margin-left: 6px;
+  }
+  .view-tab.active .count-pill { background: #0f172a30; }
+
+  .completed-item {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #1e3a2a;
+    opacity: 0.9;
+  }
+  .completed-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .cs-box {
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .cs-box .cv { font-size: 1rem; font-weight: 700; }
+  .cs-box .cl { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+
+  @media(max-width: 480px) {
+    .form-row { flex-direction: column; }
+    .challenge-header { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🪟 Cleaning Challenge</h1>
+  <p>Track your window cleaning revenue daily</p>
+</header>
+
+<!-- Summary -->
+<div class="summary-grid" id="summaryGrid"></div>
+
+<!-- View Tabs -->
+<div class="view-tabs">
+  <button class="view-tab active" id="tabActive" onclick="switchView('active')">Active Challenges <span class="count-pill" id="countActive">0</span></button>
+  <button class="view-tab" id="tabCompleted" onclick="switchView('completed')">✅ Completed <span class="count-pill" id="countCompleted">0</span></button>
+</div>
+
+<!-- Active View -->
+<div id="viewActive">
+<!-- Create Challenge -->
+<div class="card">
+  <h2>Create New Challenge</h2>
+
+  <div style="margin-bottom:14px;">
+    <label style="display:block;margin-bottom:8px;">Time Frame</label>
+    <div class="timeframe-tabs">
+      <button class="tab active" onclick="selectTimeframe('daily',this)">Daily</button>
+      <button class="tab" onclick="selectTimeframe('weekly',this)">Weekly</button>
+      <button class="tab" onclick="selectTimeframe('monthly',this)">Monthly</button>
+      <button class="tab" onclick="selectTimeframe('custom',this)">Custom Range</button>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Challenge Name</label>
+      <input id="cName" type="text" placeholder="e.g. This Week Goal">
+    </div>
+    <div class="form-group" id="startDateGroup">
+      <label id="startDateLabel">Date</label>
+      <input id="cDate" type="date">
+    </div>
+    <div class="form-group" id="endDateGroup" style="display:none;">
+      <label>End Date</label>
+      <input id="cEndDate" type="date">
+    </div>
+    <div class="form-group">
+      <label>Revenue Goal (£)</label>
+      <input id="cGoal" type="number" min="0" placeholder="500">
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <button class="btn btn-primary" onclick="createChallenge()">+ Add Challenge</button>
+  </div>
+</div>
+
+<!-- Challenges -->
+<div class="card">
+  <h2>Active Challenges</h2>
+  <div class="challenge-list" id="challengeList"></div>
+</div>
+</div><!-- end viewActive -->
+
+<!-- Completed View -->
+<div id="viewCompleted" style="display:none;">
+  <div class="card">
+    <h2>Completed Challenges</h2>
+    <div class="challenge-list" id="completedList"></div>
+  </div>
+</div>
+
+<script>
+let challenges = JSON.parse(localStorage.getItem('wc_challenges') || '[]');
+let selectedTimeframe = 'daily';
+let currentView = 'active';
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('viewActive').style.display    = view === 'active'    ? '' : 'none';
+  document.getElementById('viewCompleted').style.display = view === 'completed' ? '' : 'none';
+  document.getElementById('tabActive').classList.toggle('active',    view === 'active');
+  document.getElementById('tabCompleted').classList.toggle('active', view === 'completed');
+}
+
+const today = () => new Date().toISOString().slice(0,10);
+
+// Set today as default start date
+document.getElementById('cDate').valueAsDate = new Date();
+
+function selectTimeframe(tf, btn) {
+  selectedTimeframe = tf;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  const endGroup = document.getElementById('endDateGroup');
+  const startLabel = document.getElementById('startDateLabel');
+  const startDate = document.getElementById('cDate');
+
+  if (tf === 'custom') {
+    endGroup.style.display = '';
+    startLabel.textContent = 'Start Date';
+    // default end date = 7 days from now
+    const end = new Date(); end.setDate(end.getDate() + 6);
+    document.getElementById('cEndDate').valueAsDate = end;
+  } else {
+    endGroup.style.display = 'none';
+    startLabel.textContent = 'Start Date';
+  }
+
+  // Auto-fill start date based on timeframe
+  startDate.valueAsDate = new Date();
+}
+
+function getEndDate(c) {
+  if (c.timeframe === 'custom') return c.endDate;
+  const start = new Date(c.startDate);
+  if (c.timeframe === 'daily')   { return c.startDate; }
+  if (c.timeframe === 'weekly')  { start.setDate(start.getDate() + 6); }
+  if (c.timeframe === 'monthly') { start.setMonth(start.getMonth() + 1); start.setDate(start.getDate() - 1); }
+  return start.toISOString().slice(0,10);
+}
+
+function daysLeft(c) {
+  const end = getEndDate(c);
+  const diff = Math.ceil((new Date(end) - new Date(today())) / 86400000);
+  return diff;
+}
+
+// Count Mon–Sat working days between two date strings (inclusive)
+function countWorkingDays(startStr, endStr) {
+  let count = 0;
+  const cur = new Date(startStr);
+  const end = new Date(endStr);
+  while (cur <= end) {
+    const d = cur.getDay(); // 0=Sun,6=Sat
+    if (d !== 0) count++; // exclude Sunday only
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+function workingDaysLeft(c) {
+  const end = getEndDate(c);
+  const t = today();
+  if (end < t) return 0;
+  return countWorkingDays(t > c.startDate ? t : c.startDate, end);
+}
+
+function dailyTarget(c) {
+  const total = countWorkingDays(c.startDate, getEndDate(c));
+  if (total === 0) return c.goal;
+  return c.goal / total;
+}
+
+function save() {
+  localStorage.setItem('wc_challenges', JSON.stringify(challenges));
+}
+
+function formatMoney(n) {
+  return '£' + Number(n).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function pct(earned, goal) {
+  if (!goal) return 0;
+  return Math.min(Math.round((earned / goal) * 100), 100);
+}
+
+function barColor(p) {
+  if (p >= 100) return '#22c55e';
+  if (p >= 60)  return '#38bdf8';
+  return '#f59e0b';
+}
+
+function getStatus(c) {
+  const total = c.logs.reduce((s, l) => s + l.amount, 0);
+  const end = getEndDate(c);
+  if (total >= c.goal) return 'met';
+  if (end < today())   return 'missed';
+  return 'active';
+}
+
+const tfLabel = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', custom:'Custom' };
+const tfClass = { daily:'tf-daily', weekly:'tf-weekly', monthly:'tf-monthly', custom:'tf-custom' };
+
+function createChallenge() {
+  const name = document.getElementById('cName').value.trim();
+  const startDate = document.getElementById('cDate').value;
+  const goal = parseFloat(document.getElementById('cGoal').value);
+  const endDate = selectedTimeframe === 'custom' ? document.getElementById('cEndDate').value : null;
+
+  if (!name || !startDate || isNaN(goal) || goal <= 0) {
+    alert('Please fill in all fields with valid values.');
+    return;
+  }
+  if (selectedTimeframe === 'custom' && (!endDate || endDate < startDate)) {
+    alert('End date must be after start date.');
+    return;
+  }
+
+  challenges.unshift({ id: Date.now(), name, startDate, endDate, timeframe: selectedTimeframe, goal, logs: [] });
+  save();
+  document.getElementById('cName').value = '';
+  document.getElementById('cGoal').value = '';
+  render();
+}
+
+function logRevenue(id) {
+  const amtEl  = document.getElementById('log_' + id);
+  const noteEl = document.getElementById('note_' + id);
+  const dateEl = document.getElementById('ldate_' + id);
+  const amt = parseFloat(amtEl.value);
+  if (isNaN(amt) || amt <= 0) { alert('Enter a valid amount.'); return; }
+
+  const c = challenges.find(x => x.id === id);
+  c.logs.push({
+    amount: amt,
+    note: noteEl.value.trim() || '',
+    date: dateEl.value || today(),
+    time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+  });
+  amtEl.value = '';
+  noteEl.value = '';
+  save();
+  render();
+}
+
+function deleteChallenge(id) {
+  if (!confirm('Delete this challenge?')) return;
+  challenges = challenges.filter(x => x.id !== id);
+  save();
+  render();
+}
+
+function renderSummary() {
+  // Total Earned: one log per day per challenge — count each calendar date only once
+  const seenDates = {};
+  challenges.forEach(c => c.logs.forEach(l => {
+    if (!(l.date in seenDates)) seenDates[l.date] = l.amount;
+  }));
+  const total = Object.values(seenDates).reduce((s, v) => s + v, 0);
+
+  // Total Goals: for each unique working day covered by any challenge,
+  // take the highest daily target among overlapping challenges — no double-counting
+  const dayMaxTarget = {};
+  challenges.forEach(c => {
+    const end = getEndDate(c);
+    const dt = dailyTarget(c);
+    const cur = new Date(c.startDate);
+    const endD = new Date(end);
+    while (cur <= endD) {
+      const dow = cur.getDay();
+      if (dow !== 0) { // Mon–Sat working days
+        const key = cur.toISOString().slice(0,10);
+        if (!dayMaxTarget[key] || dt > dayMaxTarget[key]) dayMaxTarget[key] = dt;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+  const totalGoal = Object.values(dayMaxTarget).reduce((s, v) => s + v, 0);
+
+  const met    = challenges.filter(c => getStatus(c) === 'met').length;
+  const active = challenges.filter(c => getStatus(c) === 'active').length;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="summary-box"><div class="val">${challenges.length}</div><div class="lbl">Challenges</div></div>
+    <div class="summary-box"><div class="val" style="color:#22c55e">${met}</div><div class="lbl">Goals Met</div></div>
+    <div class="summary-box"><div class="val" style="color:#38bdf8">${active}</div><div class="lbl">Active</div></div>
+    <div class="summary-box"><div class="val" style="font-size:1.1rem">${formatMoney(total)}</div><div class="lbl">Total Earned</div></div>
+    <div class="summary-box"><div class="val" style="font-size:1.1rem;color:#64748b">${formatMoney(totalGoal)}</div><div class="lbl">Total Goals</div></div>
+  `;
+}
+
+function renderCompleted() {
+  const el = document.getElementById('completedList');
+  const done = challenges.filter(c => {
+    const status = getStatus(c);
+    return status === 'met' || status === 'missed';
+  });
+
+  if (!done.length) {
+    el.innerHTML = '<div class="empty">No completed challenges yet.</div>';
+    return;
+  }
+
+  el.innerHTML = done.map(c => {
+    const earned  = c.logs.reduce((s, l) => s + l.amount, 0);
+    const p       = pct(earned, c.goal);
+    const status  = getStatus(c);
+    const end     = getEndDate(c);
+    const wdTotal = countWorkingDays(c.startDate, end);
+    const dailyAvg = c.logs.length ? earned / wdTotal : 0;
+    const hitGoal  = status === 'met';
+
+    let dateRange = c.startDate;
+    if (c.timeframe !== 'daily') dateRange += ` → ${end}`;
+
+    return `
+    <div class="completed-item">
+      <div class="challenge-header">
+        <div>
+          <div class="challenge-title">
+            ${c.name}
+            <span class="timeframe-badge ${tfClass[c.timeframe]}">${tfLabel[c.timeframe]}</span>
+          </div>
+          <div class="challenge-date">📅 ${dateRange}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="badge ${hitGoal ? 'badge-met' : 'badge-missed'}">${hitGoal ? 'Goal Met ✓' : 'Missed'}</span>
+          <button class="btn btn-danger" onclick="deleteChallenge(${c.id})">Delete</button>
+        </div>
+      </div>
+
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${p}%;background:${barColor(p)}"></div>
+      </div>
+
+      <div class="completed-summary">
+        <div class="cs-box">
+          <div class="cv" style="color:#38bdf8">${formatMoney(c.goal)}</div>
+          <div class="cl">Goal</div>
+        </div>
+        <div class="cs-box">
+          <div class="cv" style="color:${hitGoal?'#22c55e':'#ef4444'}">${formatMoney(earned)}</div>
+          <div class="cl">Earned</div>
+        </div>
+        <div class="cs-box">
+          <div class="cv" style="color:${hitGoal?'#22c55e':'#f59e0b'}">${p}%</div>
+          <div class="cl">Achieved</div>
+        </div>
+        <div class="cs-box">
+          <div class="cv" style="color:#a78bfa">${formatMoney(dailyAvg)}</div>
+          <div class="cl">Avg / day</div>
+        </div>
+        <div class="cs-box">
+          <div class="cv" style="color:#64748b">${wdTotal}</div>
+          <div class="cl">Working days</div>
+        </div>
+      </div>
+
+      ${c.logs.length ? `<div class="log-list" style="max-height:60px;margin-top:10px;">${
+        c.logs.slice().reverse().map(l =>
+          `<div>${l.date} ${l.time} — <span>${formatMoney(l.amount)}</span>${l.note ? ' · ' + l.note : ''}</div>`
+        ).join('')
+      }</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  renderSummary();
+
+  // update tab counts
+  const activeCnt    = challenges.filter(c => getStatus(c) === 'active').length;
+  const completedCnt = challenges.filter(c => { const s=getStatus(c); return s==='met'||s==='missed'; }).length;
+  document.getElementById('countActive').textContent    = activeCnt;
+  document.getElementById('countCompleted').textContent = completedCnt;
+
+  renderCompleted();
+
+  const el = document.getElementById('challengeList');
+  const active = challenges.filter(c => getStatus(c) === 'active');
+
+  if (!active.length) {
+    el.innerHTML = '<div class="empty">No active challenges. Create one above!</div>';
+    return;
+  }
+
+  el.innerHTML = active.map(c => {
+    const earned    = c.logs.reduce((s, l) => s + l.amount, 0);
+    const p         = pct(earned, c.goal);
+    const status    = getStatus(c);
+    const end       = getEndDate(c);
+    const dl        = daysLeft(c);
+    const remaining = Math.max(c.goal - earned, 0);
+    const badgeCls  = {met:'badge-met', missed:'badge-missed', active:'badge-active'}[status];
+    const badgeTxt  = {met:'Goal Met ✓', missed:'Missed', active:'Active'}[status];
+
+    let dateRange = c.startDate;
+    if (c.timeframe !== 'daily') dateRange += ` → ${end}`;
+
+    let daysInfo = '';
+    if (status === 'active') {
+      if (dl === 0) daysInfo = `<div class="days-left"><span class="urgent">Last day!</span></div>`;
+      else if (dl === 1) daysInfo = `<div class="days-left"><span class="urgent">1 day left</span></div>`;
+      else if (dl > 0) daysInfo = `<div class="days-left">${dl} days left</div>`;
+    }
+
+    const logs = c.logs.slice().reverse().map(l =>
+      `<div>${l.date} ${l.time} — <span>${formatMoney(l.amount)}</span>${l.note ? ' · ' + l.note : ''}</div>`
+    ).join('');
+
+    return `
+    <div class="challenge-item">
+      <div class="challenge-header">
+        <div>
+          <div class="challenge-title">
+            ${c.name}
+            <span class="timeframe-badge ${tfClass[c.timeframe]}">${tfLabel[c.timeframe]}</span>
+          </div>
+          <div class="challenge-date">📅 ${dateRange}</div>
+          ${daysInfo}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="badge ${badgeCls}">${badgeTxt}</span>
+          <button class="btn btn-danger" onclick="deleteChallenge(${c.id})">Delete</button>
+        </div>
+      </div>
+
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${p}%;background:${barColor(p)}"></div>
+      </div>
+
+      <div class="stats-row">
+        <span>Goal: <span class="highlight">${formatMoney(c.goal)}</span></span>
+        <span>Earned: <span class="earned">${formatMoney(earned)}</span></span>
+        <span>${p}% complete</span>
+        ${remaining > 0 ? `<span>Remaining: <span class="over">${formatMoney(remaining)}</span></span>` : ''}
+      </div>
+
+      <div class="daily-target-box">
+        <div class="dt-row">
+          <span class="dt-label">📅 Daily target <span style="color:#475569;font-weight:400">(Mon–Sat)</span></span>
+          <span class="dt-val">${formatMoney(dailyTarget(c))}<span style="color:#475569;font-size:0.75rem"> / day</span></span>
+        </div>
+        ${status === 'active' ? (() => {
+          const wdLeft = workingDaysLeft(c);
+          const needed = wdLeft > 0 ? remaining / wdLeft : remaining;
+          const onTrack = needed <= dailyTarget(c);
+          return `<div class="dt-row" style="margin-top:4px;">
+            <span class="dt-label" style="color:#64748b">${wdLeft} working day${wdLeft!==1?'s':''} left · need</span>
+            <span class="dt-val" style="color:${onTrack?'#22c55e':'#f59e0b'}">${formatMoney(needed)}<span style="font-size:0.75rem;color:#475569"> / day to hit goal</span></span>
+          </div>`;
+        })() : ''}
+      </div>
+
+      ${status !== 'missed' ? `
+      <div class="log-entry-form">
+        <input id="log_${c.id}"   type="number" min="0" placeholder="Amount (£)" />
+        <input id="ldate_${c.id}" type="date" value="${today()}" style="max-width:140px;" />
+        <input id="note_${c.id}"  type="text" placeholder="Note (optional)" />
+        <button class="btn btn-success" onclick="logRevenue(${c.id})">+ Log</button>
+      </div>` : ''}
+
+      ${c.logs.length ? `<div class="log-list">${logs}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>
